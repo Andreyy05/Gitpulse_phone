@@ -30,10 +30,10 @@ export function Header({
       window.matchMedia('(prefers-color-scheme: dark)').matches);
 
   return (
-    <header className="h-10 sm:h-11 w-full bg-[#0b0d11]/90 backdrop-blur-md border-b border-white/[0.06] px-3.5 sm:px-4 flex items-center justify-between select-none z-40 shrink-0 pt-[env(safe-area-inset-top)]">
+    <header className="w-full bg-[#0b0d11] border-b border-white/[0.08] px-4 pt-[max(14px,env(safe-area-inset-top))] pb-3 flex items-center justify-between select-none z-40 shrink-0">
       {/* Brand & Live Indicator (Left) */}
       <div className="flex items-center space-x-2">
-        <Activity size={15} className="text-zinc-400" />
+        <Activity size={16} className="text-zinc-400" />
         <span className="text-sm font-bold tracking-tight text-white">
           GitPulse
         </span>
@@ -41,7 +41,7 @@ export function Header({
       </div>
 
       {/* Action Controls (Right): Theme Toggle + Settings */}
-      <div className="flex items-center space-x-1">
+      <div className="flex items-center space-x-1.5">
         <button
           type="button"
           onClick={onToggleTheme}
@@ -49,7 +49,7 @@ export function Header({
           aria-label="Toggle Theme"
           className="w-8 h-8 rounded-lg flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
         >
-          {isDark ? <Sun size={15} /> : <Moon size={15} />}
+          {isDark ? <Sun size={16} /> : <Moon size={16} />}
         </button>
 
         <button
@@ -59,7 +59,7 @@ export function Header({
           aria-label="Settings"
           className="w-8 h-8 rounded-lg flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
         >
-          <SettingsIcon size={15} />
+          <SettingsIcon size={16} />
         </button>
       </div>
     </header>

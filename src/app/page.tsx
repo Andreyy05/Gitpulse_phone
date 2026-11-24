@@ -49,7 +49,7 @@ export default function HomePage() {
       />
 
       {/* Main Content Container (Max width for phone/desktop center frame) */}
-      <main className="flex-1 w-full p-3.5 sm:p-5 md:p-6 overflow-y-auto flex flex-col items-center justify-start pb-28 sm:pb-32">
+      <main className="flex-1 w-full px-3.5 sm:px-5 md:px-6 pt-5 sm:pt-7 overflow-y-auto flex flex-col items-center justify-start pb-28 sm:pb-32">
         <div className="w-full max-w-md sm:max-w-lg space-y-3.5 sm:space-y-4">
           {/* Tab 1: Pulse Card View */}
           {(activeTab === 'pulse' || activeTab === 'all') && (

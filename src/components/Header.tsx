@@ -30,7 +30,7 @@ export function Header({
       window.matchMedia('(prefers-color-scheme: dark)').matches);
 
   return (
-    <header className="w-full bg-[#0b0d11] border-b border-white/[0.08] px-4 pt-[max(14px,env(safe-area-inset-top))] pb-3 flex items-center justify-between select-none z-40 shrink-0">
+    <header className="w-full bg-[#0b0d11] border-b border-white/[0.08] px-4 pt-[max(18px,calc(env(safe-area-inset-top)+10px))] pb-3.5 flex items-center justify-between select-none z-40 shrink-0">
       {/* Brand & Live Indicator (Left) */}
       <div className="flex items-center space-x-2">
         <Activity size={16} className="text-zinc-400" />

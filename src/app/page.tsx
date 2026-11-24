@@ -54,9 +54,10 @@ export default function HomePage() {
           <div className="w-full flex items-center justify-between bg-white/[0.04] p-1 rounded-xl sm:rounded-2xl border border-white/[0.06] transition-colors">
             {TABS.map((tab) => (
               <button
+                type="button"
                 key={tab.id}
                 onClick={() => changeTab(tab.id)}
-                className={`flex-1 py-1 sm:py-1.5 text-center rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium tracking-tight transition-all ${
+                className={`flex-1 py-1.5 sm:py-2 text-center rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium tracking-tight transition-all cursor-pointer ${
                   activeTab === tab.id
                     ? 'bg-white/10 text-white shadow-none font-semibold'
                     : 'text-zinc-400 hover:text-zinc-200'

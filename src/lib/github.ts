@@ -9,6 +9,13 @@ import {
   YearWeek,
 } from '@/types';
 
+// In-memory server cache to avoid hitting GitHub API rate limits (60s TTL)
+const serverMemoryCache = new Map<
+  string,
+  { data: GitPulseData; timestamp: number }
+>();
+const CACHE_TTL_MS = 60 * 1000;
+
 export function formatLocalDateKey(dateInput: Date | string | number): string {
   const d = new Date(dateInput);
   if (isNaN(d.getTime())) return '';
@@ -43,7 +50,7 @@ export async function fetchContributionsCalendar(
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           Accept: 'text/html,application/xhtml+xml',
         },
-        next: { revalidate: 60 },
+        cache: 'no-store',
       }
     );
 
@@ -139,7 +146,7 @@ export async function fetchGraphQLContributions(
         'User-Agent': 'GitPulse-Mobile-PWA',
       },
       body: JSON.stringify({ query, variables: { login: username } }),
-      next: { revalidate: 60 },
+      cache: 'no-store',
     });
 
     if (!res.ok) {
@@ -210,7 +217,7 @@ export async function fetchUserRepositories(
     }
 
     const endpoint = `https://api.github.com/users/${encodeURIComponent(username)}/repos?sort=pushed&per_page=12`;
-    const res = await fetch(endpoint, { headers, next: { revalidate: 60 } });
+    const res = await fetch(endpoint, { headers, cache: 'no-store' });
 
     if (res.ok) {
       interface RawRepo {
@@ -279,7 +286,7 @@ export async function fetchUserEvents(
     }
 
     const endpoint = `https://api.github.com/users/${encodeURIComponent(username)}/events?per_page=100`;
-    const res = await fetch(endpoint, { headers, next: { revalidate: 30 } });
+    const res = await fetch(endpoint, { headers, cache: 'no-store' });
 
     if (res.ok) {
       const data = await res.json();
@@ -329,7 +336,9 @@ export function calculateStreaks(
       if (prevDate) {
         const prev = new Date(prevDate);
         const curr = new Date(dk);
-        const diffDays = Math.round((curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
+        const diffDays = Math.round(
+          (curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24)
+        );
         if (diffDays === 1) {
           runningBest++;
         } else {
@@ -420,7 +429,8 @@ export function calculateExtendedStats(
     name: dayFullNames[maxDayIdx],
     short: dayNames[maxDayIdx],
     count: Math.max(0, maxDayCount),
-    percentage: totalAllDays > 0 ? Math.round((maxDayCount / totalAllDays) * 100) : 0,
+    percentage:
+      totalAllDays > 0 ? Math.round((maxDayCount / totalAllDays) * 100) : 0,
   };
 
   const displayOrder = [1, 2, 3, 4, 5, 6, 0]; // Mon to Sun
@@ -433,8 +443,10 @@ export function calculateExtendedStats(
     isMax: idx === maxDayIdx,
   }));
 
-  const repoMap: Record<string, { name: string; commits: number; pushes: number; url: string }> =
-    {};
+  const repoMap: Record<
+    string,
+    { name: string; commits: number; pushes: number; url: string }
+  > = {};
   for (const event of pushEvents) {
     const rName = event.repo?.name;
     if (!rName) continue;
@@ -455,7 +467,9 @@ export function calculateExtendedStats(
     repoMap[rName].pushes += 1;
   }
 
-  const sortedRepos = Object.values(repoMap).sort((a, b) => b.commits - a.commits);
+  const sortedRepos = Object.values(repoMap).sort(
+    (a, b) => b.commits - a.commits
+  );
   const mostActiveRepo = sortedRepos[0] || null;
 
   // 52-week full year calendar
@@ -548,31 +562,48 @@ export function calculateExtendedStats(
 
 export async function fetchFullGitHubData(
   username: string,
-  token?: string
+  token?: string,
+  forceRefresh = false
 ): Promise<GitPulseData> {
   const cleanUser = username.trim();
   if (!cleanUser) {
     throw new Error('GitHub username is required.');
   }
 
+  const cacheKey = `${cleanUser.toLowerCase()}_${token ? 'auth' : 'anon'}`;
+  const now = Date.now();
+
+  if (!forceRefresh) {
+    const cached = serverMemoryCache.get(cacheKey);
+    if (cached && now - cached.timestamp < CACHE_TTL_MS) {
+      return cached.data;
+    }
+  }
+
   let avatarUrl = `https://avatars.githubusercontent.com/${cleanUser}`;
   let calendarMap: Record<string, ParsedDayInfo> = {};
 
   if (token && token.trim()) {
-    const gql = await fetchGraphQLContributions(cleanUser, token);
-    if (gql) {
-      calendarMap = gql.daysMap;
-      if (gql.avatarUrl) avatarUrl = gql.avatarUrl;
-    }
+    try {
+      const gql = await fetchGraphQLContributions(cleanUser, token);
+      if (gql) {
+        calendarMap = gql.daysMap;
+        if (gql.avatarUrl) avatarUrl = gql.avatarUrl;
+      }
+    } catch {}
   }
 
   if (Object.keys(calendarMap).length === 0) {
-    calendarMap = await fetchContributionsCalendar(cleanUser);
+    try {
+      calendarMap = await fetchContributionsCalendar(cleanUser);
+    } catch (e) {
+      console.warn('[fetchFullGitHubData] Calendar fallback error:', e);
+    }
   }
 
   const [rawEventsList, repositories] = await Promise.all([
-    fetchUserEvents(cleanUser, token),
-    fetchUserRepositories(cleanUser, token),
+    fetchUserEvents(cleanUser, token).catch(() => []),
+    fetchUserRepositories(cleanUser, token).catch(() => []),
   ]);
 
   const pushEvents = rawEventsList.filter((e) => e.type === 'PushEvent');
@@ -594,13 +625,16 @@ export async function fetchFullGitHubData(
 
     if (Array.isArray(commits) && commits.length > 0) {
       for (const commit of commits) {
-        const commitDateRaw = commit.timestamp || commit.author?.date || event.created_at;
+        const commitDateRaw =
+          commit.timestamp || commit.author?.date || event.created_at;
         const commitDateKey = formatLocalDateKey(commitDateRaw);
-        pushCountsByDate[commitDateKey] = (pushCountsByDate[commitDateKey] || 0) + 1;
+        pushCountsByDate[commitDateKey] =
+          (pushCountsByDate[commitDateKey] || 0) + 1;
       }
     } else {
       const size = event.payload?.size || event.payload?.distinct_size || 1;
-      pushCountsByDate[eventDateKey] = (pushCountsByDate[eventDateKey] || 0) + size;
+      pushCountsByDate[eventDateKey] =
+        (pushCountsByDate[eventDateKey] || 0) + size;
     }
 
     if (eventDateKey === todayKey) {
@@ -620,7 +654,10 @@ export async function fetchFullGitHubData(
         repoUrl: `https://github.com/${repoName}`,
         commitCount,
         latestMessage,
-        time: eventDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        time: eventDate.toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
         timestamp: eventDate.getTime(),
       });
     }
@@ -673,7 +710,7 @@ export async function fetchFullGitHubData(
   recentPushes.sort((a, b) => b.timestamp - a.timestamp);
   const lastPush = recentPushes.length > 0 ? recentPushes[0] : null;
 
-  return {
+  const result: GitPulseData = {
     username: cleanUser,
     avatarUrl,
     hasPushedToday: todayCommits > 0,
@@ -694,4 +731,7 @@ export async function fetchFullGitHubData(
     rateLimitWarning: null,
     updatedAt: new Date().toISOString(),
   };
+
+  serverMemoryCache.set(cacheKey, { data: result, timestamp: now });
+  return result;
 }

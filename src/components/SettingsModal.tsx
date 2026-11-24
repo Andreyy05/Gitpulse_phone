@@ -52,8 +52,9 @@ export function SettingsModal({
             Settings &amp; Configuration
           </h2>
           <button
+            type="button"
             onClick={onClose}
-            className="w-10 h-10 rounded-full flex items-center justify-center text-zinc-400 hover:text-white bg-zinc-800/60 active:bg-zinc-800 transition-colors"
+            className="w-10 h-10 rounded-full flex items-center justify-center text-zinc-400 hover:text-white bg-zinc-800/60 active:bg-zinc-800 transition-colors cursor-pointer"
             aria-label="Close settings"
           >
             <X size={18} />
@@ -72,7 +73,7 @@ export function SettingsModal({
               required
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="e.g. torvalds"
+              placeholder="e.g. Andreyy05"
               className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 transition-colors"
             />
           </div>
@@ -87,7 +88,7 @@ export function SettingsModal({
               <button
                 type="button"
                 onClick={() => setShowToken(!showToken)}
-                className="text-[11px] text-zinc-400 hover:text-zinc-200 flex items-center space-x-1"
+                className="text-[11px] text-zinc-400 hover:text-zinc-200 flex items-center space-x-1 cursor-pointer"
               >
                 {showToken ? <EyeOff size={12} /> : <Eye size={12} />}
                 <span>{showToken ? 'Hide' : 'Show'}</span>
@@ -117,7 +118,7 @@ export function SettingsModal({
                   key={mins}
                   type="button"
                   onClick={() => setIntervalVal(mins)}
-                  className={`py-2 rounded-xl text-xs font-semibold transition-all ${
+                  className={`py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                     interval === mins
                       ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
                       : 'bg-zinc-950 border border-zinc-800 text-zinc-400 hover:text-zinc-200'
@@ -168,7 +169,7 @@ export function SettingsModal({
                   key={t.id}
                   type="button"
                   onClick={() => setTheme(t.id)}
-                  className={`py-2 rounded-xl text-xs font-semibold transition-all ${
+                  className={`py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                     theme === t.id
                       ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
                       : 'bg-zinc-950 border border-zinc-800 text-zinc-400 hover:text-zinc-200'
@@ -184,7 +185,7 @@ export function SettingsModal({
           <div className="pt-2">
             <button
               type="submit"
-              className={`w-full py-3 px-4 rounded-xl text-xs font-bold flex items-center justify-center space-x-2 transition-all active:scale-[0.98] ${
+              className={`w-full py-3 px-4 rounded-xl text-xs font-bold flex items-center justify-center space-x-2 transition-all cursor-pointer active:scale-[0.98] ${
                 savedSuccess
                   ? 'bg-emerald-500 text-zinc-950'
                   : 'bg-emerald-600 hover:bg-emerald-500 text-white'

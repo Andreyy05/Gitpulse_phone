@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Bookmark, Star, GitFork, ExternalLink, Pin, Search, Lock } from 'lucide-react';
 import { RepositoryItem } from '@/types';
 
@@ -133,12 +133,9 @@ export function RepoQuicklinks({
             LANGUAGE_COLORS[repo.language] || 'bg-zinc-400';
 
           return (
-            <a
+            <div
               key={repo.id}
-              href={repo.url}
-              target="_blank"
-              rel="noreferrer"
-              className={`p-3 rounded-xl border transition-all flex flex-col space-y-2 group block ${
+              className={`p-3 rounded-xl border transition-all flex flex-col space-y-2 ${
                 isPinned
                   ? 'bg-white/[0.04] border-white/[0.12]'
                   : 'bg-white/[0.02] border-white/[0.04] hover:border-white/[0.08] hover:bg-white/[0.03]'
@@ -146,28 +143,40 @@ export function RepoQuicklinks({
             >
               {/* Top Row: Name, Lock, Pin button & external link */}
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-1.5 truncate max-w-[220px]">
+                <a
+                  href={repo.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center space-x-1.5 truncate max-w-[220px] group cursor-pointer"
+                >
                   {repo.isPrivate && (
                     <Lock size={11} className="text-amber-400 shrink-0" />
                   )}
                   <span className="text-xs sm:text-sm font-semibold text-zinc-200 group-hover:text-emerald-400 truncate">
                     {repo.name}
                   </span>
-                </div>
+                  <ExternalLink
+                    size={11}
+                    className="text-zinc-500 group-hover:text-zinc-300 shrink-0"
+                  />
+                </a>
 
-                <div className="flex items-center space-x-2 shrink-0">
+                <div className="flex items-center space-x-1.5 shrink-0">
                   <button
+                    type="button"
                     onClick={(e) => togglePin(repo.name, e)}
-                    className={`p-1 rounded-md transition-colors ${
+                    className={`p-1.5 rounded-md hover:bg-white/[0.06] transition-colors cursor-pointer ${
                       isPinned
-                        ? 'text-amber-400 hover:text-amber-300'
+                        ? 'text-amber-400'
                         : 'text-zinc-500 hover:text-zinc-300'
                     }`}
                     title={isPinned ? 'Unpin' : 'Pin to top'}
                   >
-                    <Pin size={12} className={isPinned ? 'fill-amber-400' : ''} />
+                    <Pin
+                      size={13}
+                      className={isPinned ? 'fill-amber-400' : ''}
+                    />
                   </button>
-                  <ExternalLink size={12} className="text-zinc-500 group-hover:text-zinc-300" />
                 </div>
               </div>
 
@@ -199,7 +208,7 @@ export function RepoQuicklinks({
                   </span>
                 )}
               </div>
-            </a>
+            </div>
           );
         })}
       </div>

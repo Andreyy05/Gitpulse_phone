@@ -63,14 +63,26 @@ export function StatusCard({ data, loading, error, onRefresh }: StatusCardProps)
     };
   }
 
-  const hasPushed = data?.hasPushedToday;
-  const commitCount = data?.totalCommitsToday || 0;
+  const username = data?.username || 'Andreyy05';
+  const hasPushed = data?.hasPushedToday ?? false;
+  const commitCount = data?.totalCommitsToday ?? 0;
+  const currentStreak = data?.currentStreak ?? 0;
+  const bestStreak = data?.bestStreak ?? 0;
 
-  const handleOpenProfile = () => {
-    if (data?.username) {
-      window.open(`https://github.com/${data.username}`, '_blank');
-    }
-  };
+  // Generate 14 placeholder days if data is not loaded yet
+  const days14 =
+    data?.history14Days ||
+    Array.from({ length: 14 }).map((_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (13 - i));
+      const dk = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      return {
+        date: dk,
+        count: 0,
+        level: 0,
+        isToday: i === 13,
+      };
+    });
 
   return (
     <div className="flex flex-col space-y-3.5 sm:space-y-4">
@@ -80,28 +92,33 @@ export function StatusCard({ data, loading, error, onRefresh }: StatusCardProps)
           {!avatarError && data?.avatarUrl ? (
             <img
               src={data.avatarUrl}
-              alt={data?.username || 'User'}
+              alt={username}
               onError={() => setAvatarError(true)}
               className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-white/[0.08] object-cover shrink-0"
             />
           ) : (
             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/[0.06] border border-white/[0.08] flex items-center justify-center text-zinc-300 shrink-0 font-medium text-xs">
-              {data?.username ? (
-                data.username.slice(0, 2).toUpperCase()
+              {username ? (
+                username.slice(0, 2).toUpperCase()
               ) : (
                 <User size={14} />
               )}
             </div>
           )}
           <div className="flex flex-col">
-            <button
-              onClick={handleOpenProfile}
-              className="text-xs sm:text-sm font-semibold text-zinc-200 hover:text-white flex items-center space-x-1 transition-colors text-left tracking-tight"
+            <a
+              href={`https://github.com/${encodeURIComponent(username)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs sm:text-sm font-semibold text-zinc-200 hover:text-white flex items-center space-x-1 transition-colors text-left tracking-tight group"
               title="Open GitHub Profile"
             >
-              <span>@{data?.username || 'user'}</span>
-              <ExternalLink size={11} className="text-zinc-500" />
-            </button>
+              <span>@{username}</span>
+              <ExternalLink
+                size={11}
+                className="text-zinc-500 group-hover:text-zinc-300 transition-colors"
+              />
+            </a>
             <div className="flex items-center space-x-1.5">
               <span className="text-[11px] text-zinc-500">
                 {data?.updatedAt
@@ -109,6 +126,8 @@ export function StatusCard({ data, loading, error, onRefresh }: StatusCardProps)
                       hour: '2-digit',
                       minute: '2-digit',
                     })}`
+                  : loading
+                  ? 'Syncing...'
                   : 'Not synced'}
               </span>
               {data?.isOffline && (
@@ -126,244 +145,240 @@ export function StatusCard({ data, loading, error, onRefresh }: StatusCardProps)
 
         {/* Sync Button */}
         <button
+          type="button"
           onClick={onRefresh}
           disabled={loading}
-          className="px-3 py-1.5 rounded-xl bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.06] active:bg-white/[0.08] text-zinc-300 hover:text-white transition-colors disabled:opacity-50 flex items-center space-x-1.5 text-xs font-medium"
+          className="px-3 py-1.5 rounded-xl bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.06] active:bg-white/[0.08] text-zinc-300 hover:text-white transition-colors disabled:opacity-50 flex items-center space-x-1.5 text-xs font-medium cursor-pointer"
           title="Refresh now"
         >
           <RefreshCw
             size={12}
-            className={loading ? 'animate-spin text-zinc-400' : 'text-zinc-400'}
+            className={loading ? 'animate-spin text-emerald-400' : 'text-zinc-400'}
           />
           <span className="font-medium">Sync</span>
         </button>
       </div>
 
-      {/* 2. Streak Badge Row */}
-      {data && (data.currentStreak > 0 || data.bestStreak > 0) && (
-        <div className="flex items-center justify-between px-0.5">
-          {/* Current Streak Pill */}
-          <div
-            className={`inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold tracking-tight border ${
-              data.currentStreak >= 7
-                ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/25'
-                : data.currentStreak >= 1
-                ? 'bg-amber-500/10 text-amber-300 border-amber-500/25'
-                : 'bg-white/[0.04] text-zinc-400 border-white/[0.08]'
-            }`}
-          >
-            <Flame
-              size={13}
-              className={
-                data.currentStreak >= 7
-                  ? 'text-emerald-400'
-                  : data.currentStreak >= 1
-                  ? 'text-amber-400'
-                  : 'text-zinc-500'
-              }
-            />
-            <span>
-              {data.currentStreak === 0
-                ? 'No active streak'
-                : data.currentStreak === 1
-                ? '1-day streak'
-                : `${data.currentStreak}-day streak`}
-            </span>
+      {/* Error alert banner (visible only if error occurred, but does NOT hide the card!) */}
+      {error && (
+        <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center justify-between">
+          <div className="flex items-center space-x-2 truncate">
+            <AlertTriangle size={14} className="text-rose-400 shrink-0" />
+            <span className="truncate">{error}</span>
           </div>
-
-          {/* Best Streak */}
-          {data.bestStreak > 0 && (
-            <span className="text-xs text-zinc-500 tracking-tight font-medium">
-              Best:{' '}
-              <span className="font-bold text-zinc-200">
-                {data.bestStreak}d
-              </span>
-            </span>
-          )}
+          <button
+            type="button"
+            onClick={onRefresh}
+            className="text-xs font-semibold underline text-rose-400 hover:text-rose-200 ml-2 shrink-0 cursor-pointer"
+          >
+            Retry
+          </button>
         </div>
       )}
+
+      {/* 2. Streak Badge Row */}
+      <div className="flex items-center justify-between px-0.5">
+        {/* Current Streak Pill */}
+        <div
+          className={`inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold tracking-tight border ${
+            currentStreak >= 7
+              ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/25'
+              : currentStreak >= 1
+              ? 'bg-amber-500/10 text-amber-300 border-amber-500/25'
+              : 'bg-white/[0.04] text-zinc-400 border-white/[0.08]'
+          }`}
+        >
+          <Flame
+            size={13}
+            className={
+              currentStreak >= 7
+                ? 'text-emerald-400'
+                : currentStreak >= 1
+                ? 'text-amber-400'
+                : 'text-zinc-500'
+            }
+          />
+          <span>
+            {currentStreak === 0
+              ? 'No active streak'
+              : currentStreak === 1
+              ? '1-day streak'
+              : `${currentStreak}-day streak`}
+          </span>
+        </div>
+
+        {/* Best Streak */}
+        <span className="text-xs text-zinc-500 tracking-tight font-medium">
+          Best:{' '}
+          <span className="font-bold text-zinc-200">
+            {bestStreak > 0 ? `${bestStreak}d` : '0d'}
+          </span>
+        </span>
+      </div>
 
       {/* 3. Main Status Hero Card */}
-      {error ? (
-        <div className="p-4 rounded-2xl bg-rose-500/[0.08] border border-rose-500/20 text-rose-300 text-xs flex items-start space-x-2.5">
-          <AlertTriangle size={15} className="text-rose-400 shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <p className="font-semibold text-rose-200">Unable to check activity</p>
-            <p className="text-[11px] text-rose-400/90 mt-0.5">{error}</p>
-          </div>
-        </div>
-      ) : (
-        <div className="relative p-5 sm:p-6 rounded-2xl bg-white/[0.02] border border-white/[0.08] shadow-sm transition-all">
-          {/* Status Pill Header */}
-          <div className="flex items-center justify-between mb-4">
-            <div
-              className={`inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold tracking-tight ${
-                hasPushed
-                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                  : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-              }`}
-            >
-              <span
-                className={`w-1.5 h-1.5 rounded-full ${
-                  hasPushed ? 'bg-emerald-400' : 'bg-amber-400'
-                }`}
-              />
-              <span>{hasPushed ? 'STREAK ACTIVE' : 'PENDING PUSH'}</span>
-            </div>
-
+      <div className="relative p-5 sm:p-6 rounded-2xl bg-white/[0.02] border border-white/[0.08] shadow-sm transition-all">
+        {/* Status Pill Header */}
+        <div className="flex items-center justify-between mb-4">
+          <div
+            className={`inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold tracking-tight ${
+              hasPushed
+                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+            }`}
+          >
             <span
-              className={`text-xs font-medium tracking-tight ${
-                hasPushed ? 'text-zinc-400' : 'text-amber-400/90'
+              className={`w-1.5 h-1.5 rounded-full ${
+                hasPushed ? 'bg-emerald-400' : 'bg-amber-400'
               }`}
-            >
-              {hasPushed ? 'Safe today' : 'Streak at risk'}
+            />
+            <span>{hasPushed ? 'STREAK ACTIVE' : 'PENDING PUSH'}</span>
+          </div>
+
+          <span
+            className={`text-xs font-medium tracking-tight ${
+              hasPushed ? 'text-zinc-400' : 'text-amber-400/90'
+            }`}
+          >
+            {hasPushed ? 'Safe today' : 'Streak at risk'}
+          </span>
+        </div>
+
+        {/* Commits Big Counter */}
+        <div className="flex items-baseline space-x-3.5 my-3 sm:my-4">
+          <span className="text-5xl sm:text-6xl font-bold tracking-tight text-white">
+            {commitCount}
+          </span>
+          <div className="flex flex-col">
+            <span className="text-xs sm:text-sm font-semibold text-zinc-200 tracking-tight">
+              {commitCount === 1
+                ? '1 commit pushed today'
+                : `${commitCount} commits pushed today`}
             </span>
-          </div>
-
-          {/* Commits Big Counter */}
-          <div className="flex items-baseline space-x-3.5 my-3 sm:my-4">
-            <span className="text-5xl sm:text-6xl font-bold tracking-tight text-white">
-              {commitCount}
+            <span className="text-[11px] sm:text-xs text-zinc-500">
+              {hasPushed
+                ? `Last push at ${data?.lastPushTime || 'Today'}`
+                : 'No commits detected on public events yet'}
             </span>
-            <div className="flex flex-col">
-              <span className="text-xs sm:text-sm font-semibold text-zinc-200 tracking-tight">
-                {commitCount === 1
-                  ? '1 commit pushed today'
-                  : `${commitCount} commits pushed today`}
-              </span>
-              <span className="text-[11px] sm:text-xs text-zinc-500">
-                {hasPushed
-                  ? `Last push at ${data?.lastPushTime || 'Today'}`
-                  : 'No commits detected on public events yet'}
-              </span>
-            </div>
-          </div>
-
-          {/* Countdown to Midnight */}
-          <div className="mt-4 pt-3.5 border-t border-white/[0.06]">
-            <div className="flex items-center justify-between text-xs sm:text-sm mb-2">
-              <span className="text-zinc-400 flex items-center space-x-1.5 font-medium">
-                <Clock
-                  size={12}
-                  className={
-                    !hasPushed && timeLeft.isCritical
-                      ? 'text-rose-500 animate-pulse'
-                      : 'text-zinc-400'
-                  }
-                />
-                <span>Time until midnight:</span>
-              </span>
-              <span
-                className={`font-mono text-xs sm:text-sm font-semibold ${
-                  hasPushed
-                    ? 'text-zinc-200'
-                    : timeLeft.isCritical
-                    ? 'text-rose-400 font-bold animate-pulse'
-                    : timeLeft.isUrgent
-                    ? 'text-amber-400'
-                    : 'text-zinc-200'
-                }`}
-              >
-                {timeLeft.formatted}
-              </span>
-            </div>
-
-            {/* Time progress bar */}
-            <div className="w-full bg-white/[0.06] rounded-full h-1.5 overflow-hidden">
-              <div
-                className={`h-full transition-all duration-1000 ${
-                  hasPushed
-                    ? 'bg-emerald-500'
-                    : timeLeft.isCritical
-                    ? 'bg-rose-500 animate-pulse'
-                    : timeLeft.isUrgent
-                    ? 'bg-amber-500'
-                    : 'bg-zinc-400'
-                }`}
-                style={{ width: `${timeLeft.progressPercent}%` }}
-              />
-            </div>
-          </div>
-
-          {/* 14-Day Activity Heatmap */}
-          <div className="mt-4 pt-3.5 border-t border-white/[0.06]">
-            <div className="flex items-center justify-between text-xs mb-2.5">
-              <span className="text-zinc-400 flex items-center space-x-1.5 font-medium">
-                <Calendar size={12} className="text-zinc-400" />
-                <span>14-Day Activity</span>
-              </span>
-              <span className="text-[11px] text-zinc-400 font-medium">
-                {hoveredDay ? (
-                  <span className="text-zinc-200 font-semibold">
-                    {hoveredDay.date}: {hoveredDay.count}{' '}
-                    {hoveredDay.count === 1 ? 'commit' : 'commits'}
-                  </span>
-                ) : (
-                  <span>{data?.total14DaysCommits || 0} commits total</span>
-                )}
-              </span>
-            </div>
-
-            {/* 14-Square Row */}
-            <div className="flex items-center justify-between gap-1.5 bg-white/[0.02] border border-white/[0.04] rounded-xl p-2.5">
-              {data?.history14Days ? (
-                data.history14Days.map((day) => {
-                  let colorClass =
-                    'bg-white/[0.05] border border-white/[0.04]';
-                  if (day.level === 1) {
-                    colorClass =
-                      'bg-emerald-950/70 border border-emerald-900/60';
-                  } else if (day.level === 2) {
-                    colorClass =
-                      'bg-emerald-700/70 border border-emerald-600/60';
-                  } else if (day.level >= 3) {
-                    colorClass =
-                      'bg-emerald-500 border border-emerald-400';
-                  }
-
-                  const isSelected = hoveredDay?.date === day.date;
-
-                  return (
-                    <button
-                      key={day.date}
-                      onClick={() =>
-                        setHoveredDay(isSelected ? null : day)
-                      }
-                      title={`${day.date}: ${day.count} commit(s)`}
-                      className={`flex-1 h-5 sm:h-7 rounded-[4px] sm:rounded-md border transition-all ${colorClass} ${
-                        day.isToday
-                          ? 'border-2 border-white/60 ring-2 ring-white/30'
-                          : ''
-                      } ${isSelected ? 'scale-110 ring-2 ring-white' : ''}`}
-                    />
-                  );
-                })
-              ) : (
-                Array.from({ length: 14 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="flex-1 h-5 sm:h-7 rounded-[4px] bg-white/[0.04] border border-white/[0.04] animate-pulse"
-                  />
-                ))
-              )}
-            </div>
-
-            {/* Legend & Labels */}
-            <div className="flex items-center justify-between text-[10px] text-zinc-500 mt-2 px-0.5">
-              <span>14d ago</span>
-              <div className="flex items-center space-x-1">
-                <span>Less</span>
-                <span className="w-2.5 h-2.5 rounded-[2px] bg-white/[0.05] border border-white/[0.04] inline-block" />
-                <span className="w-2.5 h-2.5 rounded-[2px] bg-emerald-950/70 border border-emerald-900/60 inline-block" />
-                <span className="w-2.5 h-2.5 rounded-[2px] bg-emerald-700/70 border border-emerald-600/60 inline-block" />
-                <span className="w-2.5 h-2.5 rounded-[2px] bg-emerald-500 border border-emerald-400 inline-block" />
-                <span>More</span>
-              </div>
-              <span className="text-zinc-300 font-medium">Today</span>
-            </div>
           </div>
         </div>
-      )}
+
+        {/* Countdown to Midnight */}
+        <div className="mt-4 pt-3.5 border-t border-white/[0.06]">
+          <div className="flex items-center justify-between text-xs sm:text-sm mb-2">
+            <span className="text-zinc-400 flex items-center space-x-1.5 font-medium">
+              <Clock
+                size={12}
+                className={
+                  !hasPushed && timeLeft.isCritical
+                    ? 'text-rose-500 animate-pulse'
+                    : 'text-zinc-400'
+                }
+              />
+              <span>Time until midnight:</span>
+            </span>
+            <span
+              className={`font-mono text-xs sm:text-sm font-semibold ${
+                hasPushed
+                  ? 'text-zinc-200'
+                  : timeLeft.isCritical
+                  ? 'text-rose-400 font-bold animate-pulse'
+                  : timeLeft.isUrgent
+                  ? 'text-amber-400'
+                  : 'text-zinc-200'
+              }`}
+            >
+              {timeLeft.formatted}
+            </span>
+          </div>
+
+          {/* Time progress bar */}
+          <div className="w-full bg-white/[0.06] rounded-full h-1.5 overflow-hidden">
+            <div
+              className={`h-full transition-all duration-1000 ${
+                hasPushed
+                  ? 'bg-emerald-500'
+                  : timeLeft.isCritical
+                  ? 'bg-rose-500 animate-pulse'
+                  : timeLeft.isUrgent
+                  ? 'bg-amber-500'
+                  : 'bg-zinc-400'
+              }`}
+              style={{ width: `${timeLeft.progressPercent}%` }}
+            />
+          </div>
+        </div>
+
+        {/* 14-Day Activity Heatmap */}
+        <div className="mt-4 pt-3.5 border-t border-white/[0.06]">
+          <div className="flex items-center justify-between text-xs mb-2.5">
+            <span className="text-zinc-400 flex items-center space-x-1.5 font-medium">
+              <Calendar size={12} className="text-zinc-400" />
+              <span>14-Day Activity</span>
+            </span>
+            <span className="text-[11px] text-zinc-400 font-medium">
+              {hoveredDay ? (
+                <span className="text-zinc-200 font-semibold">
+                  {hoveredDay.date}: {hoveredDay.count}{' '}
+                  {hoveredDay.count === 1 ? 'commit' : 'commits'}
+                </span>
+              ) : (
+                <span>{data?.total14DaysCommits || 0} commits total</span>
+              )}
+            </span>
+          </div>
+
+          {/* 14-Square Row */}
+          <div className="flex items-center justify-between gap-1.5 bg-white/[0.02] border border-white/[0.04] rounded-xl p-2.5">
+            {days14.map((day) => {
+              let colorClass =
+                'bg-white/[0.05] border border-white/[0.04]';
+              if (day.level === 1) {
+                colorClass =
+                  'bg-emerald-950/70 border border-emerald-900/60';
+              } else if (day.level === 2) {
+                colorClass =
+                  'bg-emerald-700/70 border border-emerald-600/60';
+              } else if (day.level >= 3) {
+                colorClass =
+                  'bg-emerald-500 border border-emerald-400';
+              }
+
+              const isSelected = hoveredDay?.date === day.date;
+
+              return (
+                <button
+                  type="button"
+                  key={day.date}
+                  onClick={() =>
+                    setHoveredDay(isSelected ? null : day)
+                  }
+                  title={`${day.date}: ${day.count} commit(s)`}
+                  className={`flex-1 h-5 sm:h-7 rounded-[4px] sm:rounded-md border transition-all cursor-pointer ${colorClass} ${
+                    day.isToday
+                      ? 'border-2 border-white/60 ring-2 ring-white/30'
+                      : ''
+                  } ${isSelected ? 'scale-110 ring-2 ring-white' : ''}`}
+                />
+              );
+            })}
+          </div>
+
+          {/* Legend & Labels */}
+          <div className="flex items-center justify-between text-[10px] text-zinc-500 mt-2 px-0.5">
+            <span>14d ago</span>
+            <div className="flex items-center space-x-1">
+              <span>Less</span>
+              <span className="w-2.5 h-2.5 rounded-[2px] bg-white/[0.05] border border-white/[0.04] inline-block" />
+              <span className="w-2.5 h-2.5 rounded-[2px] bg-emerald-950/70 border border-emerald-900/60 inline-block" />
+              <span className="w-2.5 h-2.5 rounded-[2px] bg-emerald-700/70 border border-emerald-600/60 inline-block" />
+              <span className="w-2.5 h-2.5 rounded-[2px] bg-emerald-500 border border-emerald-400 inline-block" />
+              <span>More</span>
+            </div>
+            <span className="text-zinc-300 font-medium">Today</span>
+          </div>
+        </div>
+      </div>
 
       {/* Recent Pushes Today */}
       {data?.recentPushes && data.recentPushes.length > 0 && (
@@ -384,7 +399,7 @@ export function StatusCard({ data, loading, error, onRefresh }: StatusCardProps)
                 key={push.id}
                 href={push.repoUrl}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.06] hover:border-white/[0.1] hover:bg-white/[0.04] transition-colors flex items-center justify-between text-xs block group"
               >
                 <div className="flex items-center space-x-2 truncate max-w-[220px]">

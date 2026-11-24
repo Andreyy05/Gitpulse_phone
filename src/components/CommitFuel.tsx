@@ -76,9 +76,10 @@ export function CommitFuel() {
         <div className="flex items-center space-x-1 bg-white/[0.04] p-1 rounded-xl border border-white/[0.06] overflow-x-auto">
           {CATEGORIES.map((cat) => (
             <button
+              type="button"
               key={cat.id}
               onClick={() => handleCategoryChange(cat.id)}
-              className={`px-2.5 py-1 rounded-lg text-xs tracking-tight transition-all whitespace-nowrap font-medium ${
+              className={`px-2.5 py-1 rounded-lg text-xs tracking-tight transition-all whitespace-nowrap font-medium cursor-pointer ${
                 category === cat.id
                   ? 'bg-white/10 text-white'
                   : 'text-zinc-400 hover:text-zinc-200'
@@ -106,8 +107,9 @@ export function CommitFuel() {
         <div className="flex items-center justify-between pt-2 border-t border-white/[0.04] text-[11px] text-zinc-500">
           <div className="flex items-center space-x-2">
             <button
+              type="button"
               onClick={handleRoll}
-              className={`p-1.5 rounded-lg hover:bg-white/[0.06] text-zinc-400 hover:text-white transition-all flex items-center space-x-1 text-xs ${
+              className={`p-1.5 rounded-lg hover:bg-white/[0.06] text-zinc-400 hover:text-white transition-all flex items-center space-x-1 text-xs cursor-pointer ${
                 isRolling ? 'rotate-180 duration-300' : ''
               }`}
               title="Roll another message"
@@ -118,11 +120,12 @@ export function CommitFuel() {
 
             {isModified && (
               <button
+                type="button"
                 onClick={() => {
                   setIsEditing(false);
                   setEditedMessage(generatedMessage);
                 }}
-                className="p-1 rounded hover:bg-white/[0.06] text-zinc-500 hover:text-zinc-300 transition-colors"
+                className="p-1 rounded hover:bg-white/[0.06] text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
                 title="Reset to generated message"
               >
                 <RotateCcw size={12} />
@@ -142,8 +145,9 @@ export function CommitFuel() {
             </span>
 
             <button
+              type="button"
               onClick={handleCopy}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all cursor-pointer ${
                 copied
                   ? 'bg-emerald-500 text-zinc-950'
                   : 'bg-white/10 hover:bg-white/15 text-white active:scale-95'

@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { fetchFullGitHubData } from '@/lib/github';
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const queryUser = searchParams.get('username');
     const queryToken = searchParams.get('token');
+    const forceRefresh = searchParams.get('force') === 'true';
+
     const headerToken =
       request.headers.get('x-github-token') ||
       request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
@@ -31,16 +32,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const data = await fetchFullGitHubData(username, token);
+    const data = await fetchFullGitHubData(username, token, forceRefresh);
 
     return NextResponse.json(data, {
       status: 200,
       headers: {
-        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+        'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60',
       },
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Failed to fetch GitHub activity';
+    const message =
+      err instanceof Error ? err.message : 'Failed to fetch GitHub activity';
     console.error('[API /api/github GET Error]:', message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
@@ -61,6 +63,8 @@ export async function POST(request: NextRequest) {
       process.env.GITHUB_TOKEN?.trim() ||
       '';
 
+    const forceRefresh = !!body.forceRefresh;
+
     if (!username) {
       return NextResponse.json(
         { error: 'GitHub username is required.' },
@@ -68,7 +72,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const data = await fetchFullGitHubData(username, token);
+    const data = await fetchFullGitHubData(username, token, forceRefresh);
 
     return NextResponse.json(data, {
       status: 200,
@@ -77,7 +81,8 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Failed to fetch GitHub activity';
+    const message =
+      err instanceof Error ? err.message : 'Failed to fetch GitHub activity';
     console.error('[API /api/github POST Error]:', message);
     return NextResponse.json({ error: message }, { status: 500 });
   }

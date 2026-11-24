@@ -5,6 +5,8 @@ import confetti from 'canvas-confetti';
 import { GitPulseData, UserSettings } from '@/types';
 import { playCelebrationChime } from '@/lib/audio';
 
+export type TabType = 'pulse' | 'stats' | 'repos' | 'all';
+
 const STORAGE_KEYS = {
   USERNAME: 'gitpulse_username',
   PAT: 'gitpulse_pat',
@@ -24,7 +26,7 @@ export function useGitPulse() {
     theme: 'dark',
   });
 
-  const [activeTab, setActiveTab] = useState<'pulse' | 'insights' | 'repos' | 'fuel'>('pulse');
+  const [activeTab, setActiveTab] = useState<TabType>('pulse');
   const [data, setData] = useState<GitPulseData | null>(null);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -34,7 +36,6 @@ export function useGitPulse() {
   const hasCelebratedRef = useRef(false);
   const initialLoadDoneRef = useRef(false);
 
-  // Initialize settings from localStorage on client mount
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -44,7 +45,7 @@ export function useGitPulse() {
       const savedInterval = Number(localStorage.getItem(STORAGE_KEYS.INTERVAL)) || 15;
       const savedSound = localStorage.getItem(STORAGE_KEYS.SOUND) !== 'false';
       const savedTheme = (localStorage.getItem(STORAGE_KEYS.THEME) as 'dark' | 'light' | 'system') || 'dark';
-      const savedTab = (localStorage.getItem(STORAGE_KEYS.TAB) as 'pulse' | 'insights' | 'repos' | 'fuel') || 'pulse';
+      const savedTab = (localStorage.getItem(STORAGE_KEYS.TAB) as TabType) || 'pulse';
 
       setSettings({
         username: savedUser,
@@ -54,11 +55,11 @@ export function useGitPulse() {
         theme: savedTheme,
       });
 
-      if (['pulse', 'insights', 'repos', 'fuel'].includes(savedTab)) {
+      if (['pulse', 'stats', 'repos', 'all'].includes(savedTab)) {
         setActiveTab(savedTab);
       }
 
-      // Try reading local cache immediately for zero-wait display
+      // Local offline cache
       const cacheKey = `${STORAGE_KEYS.CACHE_PREFIX}${savedUser.toLowerCase()}`;
       const cachedRaw = localStorage.getItem(cacheKey);
       if (cachedRaw) {
@@ -74,7 +75,7 @@ export function useGitPulse() {
     initialLoadDoneRef.current = true;
   }, []);
 
-  // Theme management on document.documentElement
+  // Theme application
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const root = document.documentElement;
@@ -104,22 +105,37 @@ export function useGitPulse() {
     }
   }, [settings.theme]);
 
-  // Tab switching with persistence
-  const changeTab = useCallback((tab: 'pulse' | 'insights' | 'repos' | 'fuel') => {
+  // Tab change
+  const changeTab = useCallback((tab: TabType) => {
     setActiveTab(tab);
     try {
       localStorage.setItem(STORAGE_KEYS.TAB, tab);
     } catch {}
   }, []);
 
-  // Main data fetcher
+  // 1-click theme toggle
+  const toggleTheme = useCallback(() => {
+    setSettings((prev) => {
+      const isCurrentlyDark =
+        prev.theme === 'dark' ||
+        (prev.theme === 'system' &&
+          window.matchMedia('(prefers-color-scheme: dark)').matches);
+      const nextTheme = isCurrentlyDark ? 'light' : 'dark';
+      try {
+        localStorage.setItem(STORAGE_KEYS.THEME, nextTheme);
+      } catch {}
+      return { ...prev, theme: nextTheme };
+    });
+  }, []);
+
+  // Main data loader
   const loadData = useCallback(
     async (isManualRefresh = false, overrideUser?: string, overrideToken?: string) => {
       const user = (overrideUser ?? settings.username).trim();
       const token = overrideToken ?? settings.githubToken;
 
       if (!user) {
-        setError('Please configure your GitHub username.');
+        setError('Please configure your GitHub username in Settings.');
         setLoading(false);
         return;
       }
@@ -133,7 +149,6 @@ export function useGitPulse() {
 
       const cacheKey = `${STORAGE_KEYS.CACHE_PREFIX}${user.toLowerCase()}`;
 
-      // Check offline mode
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
         try {
           const raw = localStorage.getItem(cacheKey);
@@ -174,12 +189,10 @@ export function useGitPulse() {
         setData(result);
         setError(null);
 
-        // Save fresh cache
         try {
           localStorage.setItem(cacheKey, JSON.stringify(result));
         } catch {}
 
-        // Celebrate with confetti & sound on first commit of the day
         if (result.hasPushedToday && !hasCelebratedRef.current) {
           hasCelebratedRef.current = true;
           if (settings.soundEnabled) {
@@ -196,7 +209,6 @@ export function useGitPulse() {
         const message = err instanceof Error ? err.message : 'Failed to fetch activity';
         console.warn('[useGitPulse] Fetch error, falling back to cache:', message);
 
-        // Fallback to cache if available
         let recovered = false;
         try {
           const raw = localStorage.getItem(cacheKey);
@@ -222,14 +234,12 @@ export function useGitPulse() {
     [settings.username, settings.githubToken, settings.soundEnabled, data]
   );
 
-  // Initial load when settings are ready
   useEffect(() => {
     if (settings.username) {
       loadData();
     }
   }, [settings.username, settings.githubToken]);
 
-  // Periodic background refresh
   useEffect(() => {
     const minutes = Math.max(1, settings.refreshInterval);
     const intervalId = setInterval(() => {
@@ -238,34 +248,13 @@ export function useGitPulse() {
     return () => clearInterval(intervalId);
   }, [settings.refreshInterval, loadData]);
 
-  // Online / Offline listener
   useEffect(() => {
     if (typeof window === 'undefined') return;
-
-    const handleOnline = () => {
-      loadData(true);
-    };
-    const handleOffline = () => {
-      setData((prev) =>
-        prev
-          ? {
-              ...prev,
-              isOffline: true,
-              offlineReason: 'Connection lost (Offline)',
-            }
-          : null
-      );
-    };
-
+    const handleOnline = () => loadData(true);
     window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
+    return () => window.removeEventListener('online', handleOnline);
   }, [loadData]);
 
-  // Save new settings
   const saveSettings = useCallback(
     (newSettings: Partial<UserSettings>) => {
       setSettings((prev) => {
@@ -288,7 +277,6 @@ export function useGitPulse() {
           }
         } catch {}
 
-        // Reload data if username or token changed
         if (
           newSettings.username !== undefined ||
           newSettings.githubToken !== undefined
@@ -310,6 +298,7 @@ export function useGitPulse() {
     error,
     activeTab,
     changeTab,
+    toggleTheme,
     refresh: () => loadData(true),
     isSettingsOpen,
     setIsSettingsOpen,

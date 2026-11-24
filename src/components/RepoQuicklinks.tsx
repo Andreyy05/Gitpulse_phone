@@ -20,24 +20,30 @@ const LANGUAGE_COLORS: Record<string, string> = {
   HTML: 'bg-orange-600',
   CSS: 'bg-indigo-500',
   Shell: 'bg-emerald-500',
-  Swift: 'bg-orange-400',
+  Ruby: 'bg-red-500',
+  Java: 'bg-amber-600',
   Kotlin: 'bg-violet-500',
+  Swift: 'bg-orange-400',
 };
 
-export function RepoQuicklinks({ repositories = [], loading }: RepoQuicklinksProps) {
-  const [pinnedNames, setPinnedNames] = useState<string[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-
-  useEffect(() => {
+export function RepoQuicklinks({
+  repositories = [],
+  loading,
+}: RepoQuicklinksProps) {
+  const [pinnedNames, setPinnedNames] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('gitpulse_pinned_repos');
-      if (saved) setPinnedNames(JSON.parse(saved));
-    } catch {}
-  }, []);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [searchQuery, setSearchQuery] = useState('');
 
   const togglePin = (repoName: string, e: React.MouseEvent) => {
-    e.preventDefault();
     e.stopPropagation();
+    e.preventDefault();
     setPinnedNames((prev) => {
       const next = prev.includes(repoName)
         ? prev.filter((n) => n !== repoName)
@@ -49,17 +55,23 @@ export function RepoQuicklinks({ repositories = [], loading }: RepoQuicklinksPro
     });
   };
 
-  if (loading && (!repositories || repositories.length === 0)) {
-    return (
-      <div className="w-full rounded-2xl bg-zinc-900/60 border border-zinc-800/80 p-5 space-y-3 animate-pulse">
-        <div className="h-6 w-32 bg-zinc-800 rounded" />
-        <div className="space-y-2">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-16 bg-zinc-800/60 rounded-xl" />
-          ))}
+  if (!repositories || repositories.length === 0) {
+    if (loading) {
+      return (
+        <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.02] border border-white/[0.08] flex flex-col space-y-3.5 animate-pulse">
+          <div className="h-4 w-32 bg-white/[0.06] rounded" />
+          <div className="grid grid-cols-1 gap-2">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="h-16 rounded-xl border border-white/[0.03] bg-white/[0.01]"
+              />
+            ))}
+          </div>
         </div>
-      </div>
-    );
+      );
+    }
+    return null;
   }
 
   const sortedRepos = [...repositories].sort((a, b) => {
@@ -73,121 +85,123 @@ export function RepoQuicklinks({ repositories = [], loading }: RepoQuicklinksPro
   const filteredRepos = sortedRepos.filter(
     (r) =>
       r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.language.toLowerCase().includes(searchQuery.toLowerCase())
+      (r.description &&
+        r.description.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   return (
-    <div className="w-full rounded-2xl bg-zinc-900/80 border border-zinc-800/80 p-5 space-y-4">
+    <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.02] border border-white/[0.08] shadow-sm flex flex-col space-y-3.5 transition-colors">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2 text-white font-semibold text-sm">
-          <Bookmark size={15} className="text-emerald-400" />
-          <span>Repositories ({repositories.length})</span>
+        <div className="flex items-center space-x-1.5 sm:space-x-2 text-xs sm:text-sm font-semibold text-zinc-200 tracking-tight">
+          <Bookmark size={14} className="text-zinc-400" />
+          <span>Repositories</span>
         </div>
-        {pinnedNames.length > 0 && (
-          <span className="text-[11px] text-zinc-400">
-            {pinnedNames.length} pinned
+
+        <div className="flex items-center space-x-2">
+          {pinnedNames.length > 0 && (
+            <span className="text-[11px] text-zinc-500 font-medium">
+              {pinnedNames.length} pinned
+            </span>
+          )}
+          <span className="text-[11px] text-zinc-500">
+            {filteredRepos.length} total
           </span>
-        )}
+        </div>
       </div>
 
-      {/* Search Input */}
+      {/* Live Search Filter */}
       <div className="relative">
         <Search
-          size={14}
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none"
+          size={13}
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"
         />
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Filter repositories..."
-          className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500/60 transition-colors"
+          className="w-full pl-8 pr-3 py-1.5 rounded-xl text-xs bg-white/[0.03] border border-white/[0.06] focus:border-white/[0.15] text-zinc-200 placeholder-zinc-500 focus:outline-none transition-colors"
         />
       </div>
 
-      {/* Repositories List */}
-      <div className="space-y-2.5 max-h-[460px] overflow-y-auto pr-0.5">
-        {filteredRepos.length === 0 ? (
-          <p className="text-xs text-zinc-500 text-center py-6">
-            No repositories matched &ldquo;{searchQuery}&rdquo;
-          </p>
-        ) : (
-          filteredRepos.map((r) => {
-            const isPinned = pinnedNames.includes(r.name);
-            const langDotColor =
-              LANGUAGE_COLORS[r.language] || 'bg-zinc-400';
+      {/* Grid of Repository Cards */}
+      <div className="space-y-2 max-h-[480px] overflow-y-auto pr-0.5">
+        {filteredRepos.map((repo) => {
+          const isPinned = pinnedNames.includes(repo.name);
+          const langColor =
+            LANGUAGE_COLORS[repo.language] || 'bg-zinc-400';
 
-            return (
-              <a
-                key={r.id}
-                href={r.url}
-                target="_blank"
-                rel="noreferrer"
-                className={`block p-3 rounded-xl border transition-all active:scale-[0.99] group ${
-                  isPinned
-                    ? 'bg-zinc-950/80 border-emerald-500/30'
-                    : 'bg-zinc-950/50 border-zinc-800/70 hover:border-zinc-700'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center space-x-1.5 truncate max-w-[220px]">
-                    {r.isPrivate && (
-                      <Lock size={11} className="text-amber-400 shrink-0" />
-                    )}
-                    <span className="text-xs font-semibold text-zinc-200 group-hover:text-emerald-400 truncate">
-                      {r.name}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={(e) => togglePin(r.name, e)}
-                      className={`p-1 rounded-md transition-colors ${
-                        isPinned
-                          ? 'text-emerald-400 hover:text-emerald-300'
-                          : 'text-zinc-600 hover:text-zinc-400'
-                      }`}
-                      title={isPinned ? 'Unpin' : 'Pin to top'}
-                      aria-label="Pin repository"
-                    >
-                      <Pin size={13} className={isPinned ? 'fill-emerald-400' : ''} />
-                    </button>
-                    <ExternalLink size={12} className="text-zinc-500 group-hover:text-zinc-300" />
-                  </div>
+          return (
+            <a
+              key={repo.id}
+              href={repo.url}
+              target="_blank"
+              rel="noreferrer"
+              className={`p-3 rounded-xl border transition-all flex flex-col space-y-2 group block ${
+                isPinned
+                  ? 'bg-white/[0.04] border-white/[0.12]'
+                  : 'bg-white/[0.02] border-white/[0.04] hover:border-white/[0.08] hover:bg-white/[0.03]'
+              }`}
+            >
+              {/* Top Row: Name, Lock, Pin button & external link */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-1.5 truncate max-w-[220px]">
+                  {repo.isPrivate && (
+                    <Lock size={11} className="text-amber-400 shrink-0" />
+                  )}
+                  <span className="text-xs sm:text-sm font-semibold text-zinc-200 group-hover:text-emerald-400 truncate">
+                    {repo.name}
+                  </span>
                 </div>
 
-                {r.description && (
-                  <p className="text-[11px] text-zinc-400 line-clamp-1 mb-2">
-                    {r.description}
-                  </p>
+                <div className="flex items-center space-x-2 shrink-0">
+                  <button
+                    onClick={(e) => togglePin(repo.name, e)}
+                    className={`p-1 rounded-md transition-colors ${
+                      isPinned
+                        ? 'text-amber-400 hover:text-amber-300'
+                        : 'text-zinc-500 hover:text-zinc-300'
+                    }`}
+                    title={isPinned ? 'Unpin' : 'Pin to top'}
+                  >
+                    <Pin size={12} className={isPinned ? 'fill-amber-400' : ''} />
+                  </button>
+                  <ExternalLink size={12} className="text-zinc-500 group-hover:text-zinc-300" />
+                </div>
+              </div>
+
+              {/* Description */}
+              {repo.description && (
+                <p className="text-[11px] text-zinc-400 line-clamp-1">
+                  {repo.description}
+                </p>
+              )}
+
+              {/* Metadata: Language, Stars, Forks */}
+              <div className="flex items-center space-x-3 text-[10px] text-zinc-500 pt-0.5">
+                <span className="flex items-center space-x-1">
+                  <span className={`w-2 h-2 rounded-full ${langColor}`} />
+                  <span className="text-zinc-400">{repo.language}</span>
+                </span>
+
+                {repo.stars > 0 && (
+                  <span className="flex items-center space-x-0.5 text-zinc-400">
+                    <Star size={10} className="text-amber-400 fill-amber-400" />
+                    <span>{repo.stars}</span>
+                  </span>
                 )}
 
-                <div className="flex items-center space-x-3 text-[10px] text-zinc-400">
-                  <span className="flex items-center space-x-1">
-                    <span className={`w-2 h-2 rounded-full ${langDotColor}`} />
-                    <span>{r.language}</span>
+                {repo.forks > 0 && (
+                  <span className="flex items-center space-x-0.5 text-zinc-400">
+                    <GitFork size={10} />
+                    <span>{repo.forks}</span>
                   </span>
-
-                  {r.stars > 0 && (
-                    <span className="flex items-center space-x-0.5">
-                      <Star size={10} className="text-amber-400 fill-amber-400" />
-                      <span>{r.stars}</span>
-                    </span>
-                  )}
-
-                  {r.forks > 0 && (
-                    <span className="flex items-center space-x-0.5">
-                      <GitFork size={10} />
-                      <span>{r.forks}</span>
-                    </span>
-                  )}
-                </div>
-              </a>
-            );
-          })
-        )}
+                )}
+              </div>
+            </a>
+          );
+        })}
       </div>
     </div>
   );

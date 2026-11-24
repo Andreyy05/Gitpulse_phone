@@ -8,12 +8,13 @@ import { StatsCard } from '@/components/StatsCard';
 import { RepoQuicklinks } from '@/components/RepoQuicklinks';
 import { CommitFuel } from '@/components/CommitFuel';
 import { SettingsModal } from '@/components/SettingsModal';
+import { Activity, BarChart2, GitFork, Layers } from 'lucide-react';
 
-const TABS: { id: TabType; label: string }[] = [
-  { id: 'pulse', label: 'Pulse' },
-  { id: 'stats', label: 'Stats' },
-  { id: 'repos', label: 'Repos' },
-  { id: 'all', label: 'All' },
+const TABS: { id: TabType; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { id: 'pulse', label: 'Pulse', icon: Activity },
+  { id: 'stats', label: 'Stats', icon: BarChart2 },
+  { id: 'repos', label: 'Repos', icon: GitFork },
+  { id: 'all', label: 'All', icon: Layers },
 ];
 
 export default function HomePage() {
@@ -48,26 +49,8 @@ export default function HomePage() {
       />
 
       {/* Main Content Container (Max width for phone/desktop center frame) */}
-      <main className="flex-1 w-full p-3.5 sm:p-5 md:p-6 overflow-y-auto flex flex-col items-center justify-start pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+      <main className="flex-1 w-full p-3.5 sm:p-5 md:p-6 overflow-y-auto flex flex-col items-center justify-start pb-28 sm:pb-32">
         <div className="w-full max-w-md sm:max-w-lg space-y-3.5 sm:space-y-4">
-          {/* Segmented Navigation Tab Bar */}
-          <div className="w-full flex items-center justify-between bg-white/[0.04] p-1 rounded-xl sm:rounded-2xl border border-white/[0.06] transition-colors">
-            {TABS.map((tab) => (
-              <button
-                type="button"
-                key={tab.id}
-                onClick={() => changeTab(tab.id)}
-                className={`flex-1 py-1.5 sm:py-2 text-center rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium tracking-tight transition-all cursor-pointer ${
-                  activeTab === tab.id
-                    ? 'bg-white/10 text-white shadow-none font-semibold'
-                    : 'text-zinc-400 hover:text-zinc-200'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
           {/* Tab 1: Pulse Card View */}
           {(activeTab === 'pulse' || activeTab === 'all') && (
             <StatusCard
@@ -100,6 +83,35 @@ export default function HomePage() {
           )}
         </div>
       </main>
+
+      {/* Fixed Phone App Bottom Navigation Bar */}
+      <nav className="fixed bottom-0 left-0 right-0 z-40 flex justify-center px-3.5 sm:px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 pointer-events-none">
+        <div className="w-full max-w-md sm:max-w-lg bg-[#0e1217]/92 backdrop-blur-xl p-1 sm:p-1.5 rounded-2xl border border-white/[0.08] shadow-2xl shadow-black/90 flex items-center justify-between pointer-events-auto transition-colors">
+          {TABS.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                type="button"
+                key={tab.id}
+                onClick={() => changeTab(tab.id)}
+                className={`flex-1 py-2 sm:py-2.5 flex items-center justify-center space-x-1.5 rounded-xl text-xs sm:text-sm font-medium tracking-tight transition-all cursor-pointer ${
+                  isActive
+                    ? 'bg-white/10 text-white shadow-sm font-semibold'
+                    : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                <Icon
+                  className={`w-3.5 h-3.5 transition-colors ${
+                    isActive ? 'text-emerald-400' : 'text-zinc-400'
+                  }`}
+                />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
 
       {/* Settings Modal */}
       <SettingsModal

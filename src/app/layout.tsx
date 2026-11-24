@@ -5,19 +5,11 @@ export const metadata: Metadata = {
   title: 'GitPulse — GitHub Streak & Commit Fuel Companion',
   description: 'Mobile-first GitHub streak monitor and commit fuel PWA',
   applicationName: 'GitPulse',
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: 'black-translucent',
-    title: 'GitPulse',
-  },
-  formatDetection: {
-    telephone: false,
-  },
-  icons: {
-    icon: '/icons/icon-192.png',
-    apple: '/icons/icon-192.png',
-  },
   manifest: '/manifest.json',
+  icons: {
+    icon: '/favicon.ico',
+    apple: '/icons/apple-touch-icon.png',
+  },
 };
 
 export const viewport: Viewport = {
@@ -37,9 +29,17 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <head>
-        <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+        <link rel="manifest" href="/manifest.json" />
+        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta
+          name="apple-mobile-web-app-status-bar-style"
+          content="black-translucent"
+        />
+        <meta name="apple-mobile-web-app-title" content="GitPulse" />
+        <meta name="mobile-web-app-capable" content="yes" />
       </head>
-      <body className="min-h-screen bg-[#090d12] text-zinc-100 flex flex-col items-center">
+      <body className="min-h-screen bg-[#0b0d11] text-zinc-100 flex flex-col items-center">
         {children}
         <script
           dangerouslySetInnerHTML={{
